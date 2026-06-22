@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cravings To Go — AI Assistant</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1E2D40;
+  --orange:#E8943A;
+  --cream:#FDF6EE;
+  --border:#E8E0D6;
+  --muted:#6B7A8D;
+}
+html,body{height:100%;background:var(--cream);font-family:'Segoe UI',system-ui,sans-serif}
+.shell{max-width:500px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:var(--cream)}
+
+/* Header */
+.hdr{background:var(--navy);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{width:44px;height:44px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.hdr-text{flex:1}
+.hdr-name{font-size:15px;font-weight:600;color:#fff}
+.hdr-sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:1px}
+.online{display:flex;align-items:center;gap:5px;font-size:11px;color:#4ADE80}
+.dot{width:7px;height:7px;border-radius:50%;background:#4ADE80}
+
+/* Messages */
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.msgs::-webkit-scrollbar{width:4px}
+.msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.row{display:flex;align-items:flex-end;gap:8px}
+.row.user{flex-direction:row-reverse}
+.av{width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.bubble{max-width:78%;padding:10px 14px;font-size:14px;line-height:1.55}
+.row.bot .bubble{background:#fff;border-radius:4px 18px 18px 18px;border:1px solid var(--border);color:var(--navy);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.row.user .bubble{background:var(--navy);border-radius:18px 4px 18px 18px;color:#fff}
+.typing{display:flex;gap:5px;padding:4px 2px}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--orange);animation:bop 1.1s infinite}
+.typing span:nth-child(2){animation-delay:.18s}
+.typing span:nth-child(3){animation-delay:.36s}
+@keyframes bop{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* Chips */
+.chips{padding:8px 14px;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;border-top:1px solid var(--border);background:#fff}
+.chips::-webkit-scrollbar{height:0}
+.chip{white-space:nowrap;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--orange);color:var(--orange);background:#fff;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:inherit}
+.chip:hover{background:var(--orange);color:#fff}
+
+/* Input */
+.ibar{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;background:#fff;flex-shrink:0}
+.ibar input{flex:1;padding:10px 16px;border-radius:24px;border:1px solid var(--border);font-size:14px;font-family:inherit;color:var(--navy);background:var(--cream);outline:none;transition:border-color .15s}
+.ibar input:focus{border-color:var(--orange)}
+.send{width:42px;height:42px;border-radius:50%;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+.send:hover{opacity:.85}
+.send:disabled{opacity:.4;cursor:not-allowed}
+.footer{text-align:center;font-size:11px;color:var(--muted);padding:6px;background:#fff;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="hdr">
+    <div class="logo">🍗</div>
+    <div class="hdr-text">
+      <div class="hdr-name">Cravings To Go</div>
+      <div class="hdr-sub">AI FAQ Assistant</div>
+    </div>
+    <div class="online"><div class="dot"></div>Online</div>
+  </div>
+
+  <div class="msgs" id="msgs"></div>
+
+  <div class="chips">
+    <div class="chip" onclick="ask('May COD ba kayo?')">May COD ba?</div>
+    <div class="chip" onclick="ask('Ilang pax ang big tray?')">Ilang pax big tray?</div>
+    <div class="chip" onclick="ask('Nagde-deliver ba kayo?')">Nagde-deliver ba?</div>
+    <div class="chip" onclick="ask('Paano umorder?')">Paano umorder?</div>
+    <div class="chip" onclick="ask('Ilang pieces ang Shanghai big tray?')">Shanghai pieces?</div>
+    <div class="chip" onclick="ask('Open po ba kayo ngayon?')">Open ngayon?</div>
+  </div>
+
+  <div class="ibar">
+    <input id="inp" type="text" placeholder="Magtanong kayo dito..." />
+    <button class="send" id="sbtn" onclick="send()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+  <div class="footer">Powered by Cravings To Go Knowledge Base</div>
+</div>
+
+<script>
+const msgs = document.getElementById('msgs');
+const inp  = document.getElementById('inp');
+const sbtn = document.getElementById('sbtn');
+let busy = false;
+
+function addMsg(text, role) {
+  const row = document.createElement('div');
+  row.className = 'row ' + role;
+  if (role === 'bot') {
+    row.innerHTML = `<div class="av">🍗</div><div class="bubble">${text}</div>`;
+  } else {
+    row.innerHTML = `<div class="bubble">${text}</div>`;
+  }
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const row = document.createElement('div');
+  row.className = 'row bot'; row.id = 'typing';
+  row.innerHTML = `<div class="av">🍗</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
+
+addMsg('Hello po! Ako ang AI Assistant ng Cravings To Go. 😊 Pwede kayong magtanong tungkol sa aming menu, delivery, payment, at orders. Paano kita matutulungan?', 'bot');
+
+async function ask(q) { inp.value = q; await send(); }
+
+async function send() {
+  const q = inp.value.trim();
+  if (!q || busy) return;
+  busy = true; sbtn.disabled = true; inp.value = '';
+  addMsg(q, 'user');
+  showTyping();
+  try {
+    const res = await fetch('/.netlify/functions/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+    removeTyping();
+    addMsg(data.answer || 'Pakisubukan ulit po.', 'bot');
+  } catch(e) {
+    removeTyping();
+    addMsg('Paumanhin po, may konting problema. Pakisubukan ulit.', 'bot');
+  }
+  busy = false; sbtn.disabled = false; inp.focus();
+}
+
+inp.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
+</script>
+</body>
+</html>
