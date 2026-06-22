@@ -78,19 +78,17 @@ exports.handler = async function (event) {
     const { question } = JSON.parse(event.body);
     const apiKey = process.env.GEMINI_API_KEY;
 
+    const prompt = `${SYSTEM}\n\nCustomer question: ${question}\n\nYour answer:`;
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: SYSTEM }],
-          },
           contents: [
             {
-              role: "user",
-              parts: [{ text: question }],
+              parts: [{ text: prompt }],
             },
           ],
           generationConfig: {
@@ -102,7 +100,7 @@ exports.handler = async function (event) {
     );
 
     const data = await response.json();
-    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "DEBUG: " + JSON.stringify(data);
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Pakisubukan ulit po.";
 
     return {
       statusCode: 200,
@@ -116,7 +114,7 @@ exports.handler = async function (event) {
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ answer: "Error: " + err.message + " | Data: " + JSON.stringify(data) }),
+      body: JSON.stringify({ answer: "Error: " + err.message }),
     };
   }
 };
