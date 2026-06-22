@@ -102,7 +102,7 @@ exports.handler = async function (event) {
     );
 
     const data = await response.json();
-    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Pakisubukan ulit po.";
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "DEBUG: " + JSON.stringify(data);
 
     return {
       statusCode: 200,
@@ -116,7 +116,7 @@ exports.handler = async function (event) {
     return {
       statusCode: 500,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ error: "Server error: " + err.message }),
+      body: JSON.stringify({ answer: "Error: " + err.message + " | Data: " + JSON.stringify(data) }),
     };
   }
 };
