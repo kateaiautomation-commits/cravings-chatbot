@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = "gemini-3.5-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
 const SYSTEM = `You are the friendly AI customer service assistant for "Cravings To Go", a Filipino home-based party tray food business in Mabini.
 
