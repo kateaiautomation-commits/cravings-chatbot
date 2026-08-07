@@ -1,4 +1,6 @@
-const SYSTEM = `You are the friendly AI customer service assistant for "Cravings To Go" — a Filipino home-based party tray food business in Mabini.
+const DEFAULT_MODEL = "gemini-3.5-flash";
+
+const SYSTEM = `You are the friendly AI customer service assistant for "Cravings To Go", a Filipino home-based party tray food business in Mabini.
 
 Answer ONLY using this knowledge base:
 - Delivery: Yes, within Municipality of Mabini only. Fee depends on distance.
@@ -18,7 +20,7 @@ Answer ONLY using this knowledge base:
 RULES:
 1. Answer ONLY from knowledge base above. Never invent information.
 2. Use warm, friendly Taglish (Tagalog + English mix).
-3. Keep answers SHORT — 1 to 3 sentences max.
+3. Keep answers SHORT, 1 to 3 sentences max.
 4. Use "po" and "kayo" for respect.
 5. If NOT in the knowledge base, say: "Para sa karagdagang impormasyon, pwede po kayong mag-message sa amin directly. Nandito kami para tulungan kayo!"`;
 
@@ -27,36 +29,45 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
 
   try {
-    const { question } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+    const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "").trim();
 
-    if (!apiKey) return res.status(200).json({ answer: "ERROR: Walang API key sa environment variables!" });
-    if (!question) return res.status(200).json({ answer: "ERROR: Walang tanong na natanggap!" });
+    if (!apiKey) return res.status(500).json({ error: "Server configuration error" });
+    if (!question) return res.status(400).json({ error: "question is required" });
 
     const prompt = `${SYSTEM}\n\nCustomer question: ${question}\n\nYour answer:`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.3 },
-        }),
-      }
-    );
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 300 },
+      }),
+    });
 
     const data = await response.json();
-    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text
-      || "DEBUG: " + JSON.stringify(data).substring(0, 200);
 
-    return res.status(200).json({ answer });
+    if (!response.ok) {
+      console.error("Gemini error:", data);
+      return res.status(500).json({ error: "The AI service could not answer right now." });
+    }
+
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return res.status(200).json({
+      answer: answer || "Pakisubukan ulit po.",
+    });
   } catch (err) {
-    return res.status(200).json({ answer: "CATCH ERROR: " + err.message });
+    console.error("Chat error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
